@@ -1,0 +1,15 @@
+id: WEB-HEALTH-001
+title: Trang chính hiển thị nội dung
+module: General
+priority: P1
+severity: High
+technique: Smoke
+basis: Generic web health check; business behavior unverified.
+type: Auto
+status: Draft
+mutates: false
+tags: [smoke, p1]
+steps:
+  - open: /
+expect:
+  - expect_blank_not: true

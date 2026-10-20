@@ -1,0 +1,21 @@
+name: template
+description: Copy this profile for a new web or REST project.
+repo: ""
+branch: main
+safety: read-only
+base_url: http://localhost:3000
+allow_hosts:
+  - localhost
+  - 127.0.0.1
+health:
+  - /login
+env_file: .env.app
+required_env: []
+roles: {}
+adapters:
+  environment: existing-url
+  source: none
+  login: none
+viewport: 1920x1080
+schedule: {}
+plugins: {}

@@ -1,0 +1,33 @@
+name: his-vietmy
+description: HIS Việt Mỹ local Docker project profile; inherited from its existing QC setup.
+repo: https://git.aipower.vn/hisvietmy/ivf-platform
+branch: develop
+safety: local
+base_url: http://localhost:3000
+allow_hosts:
+  - localhost
+  - 127.0.0.1
+  - host.docker.internal
+health:
+  - http://localhost:3000/login
+env_file: .env.app
+required_env: []
+roles:
+  Bac_si:
+    user_env: DOCTOR_USER
+    pass_env: DOCTOR_PASS
+    login: form
+  Admin:
+    user_env: ADMIN_USER
+    pass_env: ADMIN_PASS
+    login: form
+adapters:
+  environment: docker-compose
+  source: git
+  login: form
+viewport: 1920x1080
+schedule:
+  daily: "08:30"
+  report: "17:00"
+  nightly: "22:00"
+plugins: {}

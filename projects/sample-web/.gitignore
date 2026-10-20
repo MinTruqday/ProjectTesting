@@ -1,0 +1,6 @@
+.env.app
+.auth/
+runs/
+reports/*.xlsx
+qa.db*
+data/created.json

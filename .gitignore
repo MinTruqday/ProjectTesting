@@ -1,0 +1,12 @@
+node_modules/
+dist/
+.env*
+!.env*.example
+/kit/
+projects/*/.auth/
+projects/*/runs/
+projects/*/reports/*.xlsx
+projects/*/data/created.json
+projects/*/qa.db*
+reports/
+*.log

@@ -1,0 +1,19 @@
+name: lumina-approve
+description: Example profile only; host, roles and workflow are unverified.
+repo: ""
+branch: main
+safety: read-only
+base_url: https://lumina-approve-dev.aipower.internal/automation
+allow_hosts:
+  - lumina-approve-dev.aipower.internal
+health: []
+env_file: .env.app
+required_env: []
+roles: {}
+adapters:
+  environment: existing-url
+  source: none
+  login: unconfigured
+viewport: 1920x1080
+schedule: {}
+plugins: {}

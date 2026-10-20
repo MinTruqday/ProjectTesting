@@ -1,0 +1,31 @@
+{
+  "name": "qa-station",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Reusable project-independent QA test station",
+  "bin": {
+    "qa": "./bin/qa.mjs"
+  },
+  "scripts": {
+    "qa": "tsx core/cli.ts",
+    "typecheck": "tsc --noEmit",
+    "selftest": "tsx core/cli.ts selftest"
+  },
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.1153.0",
+    "better-sqlite3": "^13.0.3",
+    "exceljs": "^4.4.0",
+    "playwright": "^1.56.1",
+    "yaml": "^2.8.1"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^9.6.0",
+    "@types/node": "^22.19.0",
+    "tsx": "^4.20.6",
+    "typescript": "^5.9.3"
+  },
+  "overrides": {
+    "uuid": "^11.1.1"
+  }
+}

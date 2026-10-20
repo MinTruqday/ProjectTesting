@@ -1,0 +1,10 @@
+enabled: false
+type: s3-compatible
+endpoint: http://127.0.0.1:9000
+region: us-east-1
+bucket: ""
+prefix: qa_temp/template/
+env_file: .env.storage
+access_key_env: QA_STORAGE_ACCESS_KEY
+secret_key_env: QA_STORAGE_SECRET_KEY
+retention_hours: 12
