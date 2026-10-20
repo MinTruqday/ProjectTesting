@@ -1,0 +1,16 @@
+id: HIS-LOGIN-001
+title: HIS local login page responds with visible content
+module: General
+priority: P1
+severity: Medium
+technique: Smoke
+basis: Local-only application health; no business behavior asserted.
+type: Auto
+status: Draft
+mutates: false
+tags: [smoke, p1]
+steps:
+  - open: /login
+expect:
+  - expect_url: /login
+  - expect_text: Đăng nhập

@@ -4,7 +4,9 @@ dist/
 !.env*.example
 /kit/
 projects/*/.auth/
+projects/*/BLOCKED_*.md
 projects/*/runs/
+projects/*/evidence/
 projects/*/reports/*.xlsx
 projects/*/data/created.json
 projects/*/qa.db*

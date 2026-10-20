@@ -123,6 +123,12 @@ function completedCases(projectDir: string, runId: string): Set<string> {
   return completed;
 }
 
+export function requiredRolesForSuite(projectDir: string, suiteName: string, id: string): string[] {
+  return [...new Set(caseFiles(projectDir, suiteName, id)
+    .map(file => readCase(file).role)
+    .filter((role): role is string => Boolean(role)))];
+}
+
 export async function runCases(project: Project, projectDir: string, suiteName: string, id: string, headless: boolean, resume = false): Promise<number> {
   const files = caseFiles(projectDir, suiteName, id);
   if (!files.length) throw new Error(`Suite ${suiteName} không có testcase.`);

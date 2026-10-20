@@ -9,7 +9,7 @@ import YAML from 'yaml';
 import { appendJsonl, PROJECTS, ROOT, readProject, projectName, readJsonl, TODAY } from './project.js';
 import { assertHostAllowed, blockedRecord, checkHealth, missingEnv } from './gates.js';
 import { dailyReport, recordResult, upsertCase } from './workbook.js';
-import { runCases } from './runner.js';
+import { requiredRolesForSuite, runCases } from './runner.js';
 import { createDashboard } from './dashboard.js';
 import { pathToFileURL } from 'node:url';
 import { redactSecrets } from './secrets.js';
@@ -119,8 +119,12 @@ async function runSelftest(): Promise<boolean> {
     fs.writeFileSync(path.join(projectDir, '.env.app'), 'SELFTEST_KEY=fixture-secret-value\n');
     const missingKeyNames = missingEnv(config, projectDir).missing;
     config.required_env = [];
+    config.roles = { Doctor: { user_env: 'DOCTOR_USER', pass_env: 'DOCTOR_PASS' } };
+    const roleScopedEnvOk = missingEnv(config, projectDir, []).missing.length === 0 &&
+      missingEnv(config, projectDir).missing.join(',') === 'DOCTOR_USER,DOCTOR_PASS';
     const envGateOk = missingFileBlocked && missingKeyNames.length === 1 && missingKeyNames[0] === 'SELFTEST_MISSING';
     console.log(`${envGateOk ? 'PASS' : 'FAIL'} missing env file/key gate reports names only`);
+    console.log(`${roleScopedEnvOk ? 'PASS' : 'FAIL'} run gates require credentials only for roles in the selected suite`);
     appendJsonl(path.join(projectDir, 'runs', TODAY, 'Core', 'results.jsonl'), { id: 'SELFTEST-001', date: TODAY, project: 'sample', module: 'Core', status: 'Pass', actual: 'HTTP 200', type: 'Auto', priority: 'P1', severity: 'High' });
     await upsertCase(config, projectDir, 'SELFTEST-001');
     fs.writeFileSync(path.join(projectDir, 'cases/SELFTEST-BROWSER-001.yaml'), `id: SELFTEST-BROWSER-001\ntitle: Local synthetic page has content\nmodule: Core\npriority: P1\nseverity: High\ntype: Auto\nsteps:\n  - open: /\nexpect:\n  - expect_text: QA Station synthetic fixture\n  - expect_blank_not: true\n`);
@@ -225,7 +229,7 @@ async function runSelftest(): Promise<boolean> {
     fs.writeFileSync(configFile, 'PASSWORD=do-not-print\n');
     const output = `${fs.readFileSync(configFile, 'utf8').includes('do-not-print') ? 'secret fixture present' : ''}`;
     console.log(`${!output.includes('do-not-print') ? 'PASS' : 'FAIL'} selftest output does not expose secret fixture`);
-    return workbookOk && envGateOk && hostAllowed && externalBlocked && storageSafe.length === 1 && lockResumeOk && resumeOk && bugConfirmed && bugClosed && !redaction.includes('Secret') && !output.includes('do-not-print');
+    return workbookOk && envGateOk && roleScopedEnvOk && hostAllowed && externalBlocked && storageSafe.length === 1 && lockResumeOk && resumeOk && bugConfirmed && bugClosed && !redaction.includes('Secret') && !output.includes('do-not-print');
   } finally { fs.rmSync(tmp, { recursive: true, force: true }); }
 }
 
@@ -280,7 +284,9 @@ async function run(): Promise<number> {
     return 0;
   }
   if (command === 'run') {
-    const env = missingEnv(config, dir);
+    const suiteName = value('--suite');
+    const id = value('--id');
+    const env = missingEnv(config, dir, requiredRolesForSuite(dir, suiteName, id));
     if (env.missing.length) {
       const msg = `Thiếu tệp/khóa môi trường: ${env.missing.join(', ')}`;
       blockedRecord(dir, msg); console.error(`BLOCKED: ${msg}`); return 2;
@@ -291,7 +297,7 @@ async function run(): Promise<number> {
       const result = await checkHealth(endpoint, config.allow_hosts);
       if (!result.ok) { const msg = `Health gate thất bại: ${endpoint} ${result.status ?? result.error ?? ''}`; blockedRecord(dir, msg); console.error(`BLOCKED: ${msg}`); return 2; }
     }
-    return await runCases(config, dir, value('--suite'), value('--id'), args.includes('--headless'), args.includes('--resume'));
+    return await runCases(config, dir, suiteName, id, args.includes('--headless'), args.includes('--resume'));
   }
   if (command === 'record') {
     const status = value('--status') as Result['status'];

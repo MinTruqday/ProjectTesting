@@ -1,0 +1,3 @@
+name: smoke
+cases:
+  - HIS-LOGIN-001

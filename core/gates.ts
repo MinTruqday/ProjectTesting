@@ -14,11 +14,15 @@ export function parseEnv(file: string): Record<string, string> {
   return vars;
 }
 
-export function missingEnv(project: Project, dir: string): { file: string; missing: string[] } {
+export function missingEnv(project: Project, dir: string, roleNames?: string[]): { file: string; missing: string[] } {
   const file = safeResolve(dir, project.env_file || '.env.app');
-  if (!fs.existsSync(file)) return { file, missing: [...new Set([...(project.required_env ?? []), ...Object.values(project.roles ?? {}).flatMap(r => [r.user_env, r.pass_env].filter((v): v is string => Boolean(v))), `.env file missing: ${project.env_file || '.env.app'}`])] };
+  const roleConfigs = roleNames === undefined
+    ? Object.values(project.roles ?? {})
+    : roleNames.map(name => project.roles?.[name]).filter((role): role is NonNullable<typeof role> => Boolean(role));
+  const roleKeys = roleConfigs.flatMap(r => [r.user_env, r.pass_env].filter((v): v is string => Boolean(v)));
+  if (!fs.existsSync(file)) return { file, missing: [...new Set([...(project.required_env ?? []), ...roleKeys, `.env file missing: ${project.env_file || '.env.app'}`])] };
   const env = parseEnv(file);
-  const keys = new Set([...(project.required_env ?? []), ...Object.values(project.roles ?? {}).flatMap(r => [r.user_env, r.pass_env].filter((v): v is string => Boolean(v))) ]);
+  const keys = new Set([...(project.required_env ?? []), ...roleKeys]);
   return { file, missing: [...keys].filter(key => !env[key] && !process.env[key]) };
 }
 
