@@ -15,8 +15,8 @@ Trạng thái chỉ được nâng khi có kiểm tra tự động hoặc bằng
 | 9 | Evidence Fail mở ảnh viền đỏ từ Excel | Có screenshot runner; link `HYPERLINK` tới ảnh fixture thật trong selftest | Chưa kiểm trên workbook mở bằng ứng dụng Excel/LibreOffice |
 | 10 | Cụm cấm chặn lưu và báo ô/dòng | Có quét trước export | Chưa có fixture acceptance bắt câu vi phạm và chỉ ra ô/dòng |
 | 11 | Tắt AI vẫn hoàn tất daily/report | Core hiện không gọi AI | Daily pipeline chưa có |
-| 12 | Lỗi cùng chữ ký tăng hits | Chưa làm | Bug signature/lifecycle chưa có |
-| 13 | Verify bug qua các lượt pass | Chưa làm | Quy trình retest/close chưa có |
+| 12 | Lỗi cùng chữ ký tăng hits | Đạt trên fixture tổng hợp | `qa bug report` chuẩn hóa và băm chữ ký; selftest xác nhận cùng chữ ký tăng hits; chưa diễn tập trên dự án thật |
+| 13 | Verify bug qua các lượt pass | Đạt trên fixture tổng hợp | `qa bug verify` chỉ đóng khi testcase liên kết có 2 lượt Pass liên tiếp gắn `--bug-id`; chưa diễn tập trên dự án thật |
 | 14 | Baseline UI đổi có chủ ý chờ duyệt | Chưa làm | Baseline workflow chưa có |
 | 15 | Route/nút mới vào AI queue | Chưa làm | Recon và AI queue chưa có |
 | 16 | Bí mật trong log/Excel được che và tạo incident | Actual có redaction cơ bản | Quét file/log toàn diện và incident record chưa có |

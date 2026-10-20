@@ -15,6 +15,7 @@ import { pathToFileURL } from 'node:url';
 import { redactSecrets } from './secrets.js';
 import { cleanProjectStorage, expiredStorageObjects } from './storage-clean.js';
 import { acquireRunLock } from './run-lock.js';
+import { listBugs, reportBug, verifyBug } from './bugs.js';
 import type { Project, Result } from './types.js';
 
 const args = process.argv.slice(2);
@@ -39,6 +40,9 @@ Usage: qa <command> [options]
   ready --project <name>         Check only allowlisted health URLs
   status --project <name>        Show latest run, blocked gates, queue count
   record --project <name> ...    Append one result to JSONL
+  bug report --project <name> --signature TEXT --title TEXT --case ID --severity Low|Medium|High|Critical [--commit HASH]
+  bug verify --project <name> --id BUG-ID   Close after two consecutive linked Pass results
+  bugs list --project <name>               List tracked bugs
   upsert --project <name> --id <ID>  Upsert testcase workbook row
   daily_report --project <name>  Export report and dated workbook snapshot
   run --project <name> --suite smoke [--resume]  Execute or resume YAML suite
@@ -162,6 +166,15 @@ async function runSelftest(): Promise<boolean> {
     fs.writeFileSync(path.join(projectDir, 'evidence', TODAY, 'SELFTEST-FAIL-001.png'), png);
     for (let run = 0; run < 2; run++) appendJsonl(path.join(projectDir, 'runs', TODAY, 'Core', 'results.jsonl'), { id: 'SELFTEST-FAIL-001', date: TODAY, project: 'sample', module: 'Core', status: 'Fail', actual: `Synthetic mismatch attempt ${run + 1}`, type: 'Auto', priority: 'P1', severity: 'Critical', evidence: [`evidence/${TODAY}/SELFTEST-FAIL-001.png`] });
     await upsertCase(config, projectDir, 'SELFTEST-FAIL-001');
+    const bugCase = 'SELFTEST-BUG-001';
+    fs.writeFileSync(path.join(projectDir, 'cases', `${bugCase}.yaml`), `id: ${bugCase}\ntitle: Synthetic bug lifecycle fixture\nmodule: Core\npriority: P2\nseverity: Medium\ntype: Manual\nsteps: []\nexpect: []\n`);
+    const bugFirst = reportBug(config.name, projectDir, { signature: 'synthetic lifecycle signature', title: 'Synthetic lifecycle bug', severity: 'Medium', testcaseId: bugCase });
+    const bugSecond = reportBug(config.name, projectDir, { signature: '  SYNTHETIC   lifecycle signature ', title: 'Synthetic lifecycle bug', severity: 'Medium', testcaseId: bugCase });
+    const bugConfirmed = bugFirst.id === bugSecond.id && bugSecond.hits === 2 && bugSecond.status === 'Confirmed';
+    await recordResult(config, projectDir, { id: bugCase, module: 'Core', status: 'Pass', actual: 'Synthetic retest pass 1', type: 'Manual', priority: 'P2', severity: 'Medium', bug_id: bugFirst.id });
+    await recordResult(config, projectDir, { id: bugCase, module: 'Core', status: 'Pass', actual: 'Synthetic retest pass 2', type: 'Manual', priority: 'P2', severity: 'Medium', bug_id: bugFirst.id });
+    const bugClosed = verifyBug(config.name, projectDir, bugFirst.id).status === 'Closed';
+    console.log(`${bugConfirmed && bugClosed ? 'PASS' : 'FAIL'} bug signature deduplication, hit count and two-pass verification lifecycle`);
     fs.writeFileSync(path.join(projectDir, 'cases/SELFTEST-BANNED-001.yaml'), `id: SELFTEST-BANNED-001\ntitle: Đáng chú ý, banned phrase fixture\nmodule: Core\npriority: P3\nseverity: Low\ntype: Manual\nsteps: []\nexpect: []\n`);
     let bannedBlocked = false;
     try { await upsertCase(config, projectDir, 'SELFTEST-BANNED-001'); } catch (error) { bannedBlocked = String(error).includes('Đáng chú ý'); }
@@ -212,7 +225,7 @@ async function runSelftest(): Promise<boolean> {
     fs.writeFileSync(configFile, 'PASSWORD=do-not-print\n');
     const output = `${fs.readFileSync(configFile, 'utf8').includes('do-not-print') ? 'secret fixture present' : ''}`;
     console.log(`${!output.includes('do-not-print') ? 'PASS' : 'FAIL'} selftest output does not expose secret fixture`);
-    return workbookOk && envGateOk && hostAllowed && externalBlocked && storageSafe.length === 1 && lockResumeOk && resumeOk && !redaction.includes('Secret') && !output.includes('do-not-print');
+    return workbookOk && envGateOk && hostAllowed && externalBlocked && storageSafe.length === 1 && lockResumeOk && resumeOk && bugConfirmed && bugClosed && !redaction.includes('Secret') && !output.includes('do-not-print');
   } finally { fs.rmSync(tmp, { recursive: true, force: true }); }
 }
 
@@ -284,6 +297,22 @@ async function run(): Promise<number> {
     const status = value('--status') as Result['status'];
     if (!['Pass', 'Fail', 'Blocked', 'Chưa chạy'].includes(status)) throw new Error('status phải là Pass, Fail, Blocked hoặc Chưa chạy');
     await recordResult(config, dir, { id: value('--id'), status, module: value('--module', 'General'), actual: value('--actual'), type: value('--type', 'Auto') as Result['type'], priority: value('--priority', 'P3'), severity: value('--severity', 'Medium'), commit: value('--commit'), bug_id: value('--bug-id'), evidence: values('--evidence') });
+    return 0;
+  }
+  if (command === 'bug' && args[1] === 'report') {
+    const bug = reportBug(name, dir, { signature: value('--signature'), title: value('--title'), testcaseId: value('--case'), severity: value('--severity', 'Medium'), commit: value('--commit') || undefined });
+    console.log(`${bug.status} ${bug.id}: ${bug.hits} lần tái hiện`);
+    return 0;
+  }
+  if (command === 'bug' && args[1] === 'verify') {
+    const result = verifyBug(name, dir, value('--id'));
+    console.log(`${result.status}: ${value('--id')} — ${result.passes} lượt Pass liên tiếp`);
+    return 0;
+  }
+  if (command === 'bugs' && args[1] === 'list') {
+    const bugs = listBugs(name, dir);
+    if (!bugs.length) console.log('Không có bug được theo dõi.');
+    else for (const bug of bugs) console.log(`${bug.id}\t${bug.status}\t${bug.severity}\t${bug.hits}\t${bug.title}`);
     return 0;
   }
   if (command === 'upsert') { await upsertCase(config, dir, value('--id')); return 0; }
